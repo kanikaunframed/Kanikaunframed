@@ -1,0 +1,17 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+yarn.lock
+pnpm-lock.yaml
+bun.lock
+bun.lockb
+.env
+.env.example
+*.zip
+.aistudio/
+.env.*

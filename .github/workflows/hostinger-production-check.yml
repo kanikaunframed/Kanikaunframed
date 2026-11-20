@@ -1,0 +1,66 @@
+name: Hostinger Production Build Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-production-build:
+    name: Build & Verify (Node 22.x)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Verify Node and npm versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Clean install dependencies from lockfile
+        run: npm ci
+
+      - name: Run TypeScript static validation
+        run: npm run lint
+
+      - name: Build production Vite bundle
+        run: npm run build
+
+      - name: Verify production build artifacts in dist/
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+          ls -la dist
+          ls -la dist/assets
+          JS_COUNT=$(find dist/assets -maxdepth 1 -name '*.js' -size +0c | wc -l)
+          CSS_COUNT=$(find dist/assets -maxdepth 1 -name '*.css' -size +0c | wc -l)
+          if [ "$JS_COUNT" -lt 1 ]; then
+            echo "ERROR: No non-empty JavaScript bundle found in dist/assets"
+            exit 1
+          fi
+          if [ "$CSS_COUNT" -lt 1 ]; then
+            echo "ERROR: No non-empty CSS bundle found in dist/assets"
+            exit 1
+          fi
+          test -f "dist/Kanika Agrawal_Resume.pdf"
+          test ! -f dist/.htaccess
+          echo "Production build artifact verification passed (JS bundles: $JS_COUNT, CSS bundles: $CSS_COUNT)."
